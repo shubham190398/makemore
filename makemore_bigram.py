@@ -1,31 +1,37 @@
 """
 Counting the bigrams in the text. Add special characters at the start and the end for ease of identification.
+Have one token instead of two because obviously a word cannot start with the end token and the start token cannot follow
+a word token.
 """
 
 import torch
 import matplotlib.pyplot as plt
 
+# Load the words and create a torch tensor
 words = open("names.txt", "r").read().splitlines()
-N = torch.zeros((28, 28), dtype=torch.int32)
+N = torch.zeros((27, 27), dtype=torch.int32)
 
+# Create string to integer and integer to string dictionaries, indexing the . element at position 0
 chars = sorted(list(set(''.join(words))))
-s_to_i = {s: i for i, s in enumerate(chars)}
-s_to_i['<S>'] = 26
-s_to_i['<E>'] = 27
+s_to_i = {s: i+1 for i, s in enumerate(chars)}
+s_to_i['.'] = 0
+i_to_s = {i: s for s, i in s_to_i.items()}
 
+# Update the frequency of the particular character in the tensor
 for w in words:
-    chs = ['<S>'] + list(w) + ['<E>']
+    chs = ['.'] + list(w) + ['.']
     for ch1, ch2 in zip(chs, chs[1:]):
         idx1 = s_to_i[ch1]
         idx2 = s_to_i[ch2]
         N[idx1, idx2] += 1
 
-i_to_s = {i: s for s, i in s_to_i.items()}
+# Display the lookup table
 
 plt.figure(figsize=(16, 16))
-plt.imshow(N, cmap='Blues')
-for i in range(28):
-    for j in range(28):
+plt.imshow(N, cmap='Blues', aspect='auto')
+
+for i in range(27):
+    for j in range(27):
         ch_str = i_to_s[i] + i_to_s[j]
         plt.text(j, i, ch_str, ha="center", va="bottom", color="gray")
         plt.text(j, i, N[i, j].item(), ha="center", va="top", color="gray")

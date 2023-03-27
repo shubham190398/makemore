@@ -25,10 +25,10 @@ for w in words:
         idx2 = s_to_i[ch2]
         N[idx1, idx2] += 1
 
-# Display the lookup table
+# Create the lookup table, uncomment the grayed code to visualize the table
 
-plt.figure(figsize=(16, 16))
-plt.imshow(N, cmap='Blues', aspect='auto')
+# plt.figure(figsize=(16, 16))
+# plt.imshow(N, cmap='Blues', aspect='auto')
 
 for i in range(27):
     for j in range(27):
@@ -36,5 +36,23 @@ for i in range(27):
         plt.text(j, i, ch_str, ha="center", va="bottom", color="gray")
         plt.text(j, i, N[i, j].item(), ha="center", va="top", color="gray")
 
-plt.axis('off')
-plt.show()
+# plt.axis('off')
+# plt.show()
+
+# Normalizing N
+P = N.float()
+P = P/P.sum(1, keepdim=True)
+
+# Sampling from N
+g = torch.Generator().manual_seed(1123581321)
+
+for i in range(20):
+    output_names = []
+    idx = 0
+    while True:
+        p = P[idx]
+        idx = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
+        output_names.append(i_to_s[idx])
+        if not idx:
+            break
+    print(''.join(output_names))

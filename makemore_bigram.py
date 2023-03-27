@@ -7,52 +7,58 @@ a word token.
 import torch
 import matplotlib.pyplot as plt
 
-# Load the words and create a torch tensor
-words = open("names.txt", "r").read().splitlines()
-N = torch.zeros((27, 27), dtype=torch.int32)
 
-# Create string to integer and integer to string dictionaries, indexing the . element at position 0
-chars = sorted(list(set(''.join(words))))
-s_to_i = {s: i+1 for i, s in enumerate(chars)}
-s_to_i['.'] = 0
-i_to_s = {i: s for s, i in s_to_i.items()}
+def bigram():
 
-# Update the frequency of the particular character in the tensor
-for w in words:
-    chs = ['.'] + list(w) + ['.']
-    for ch1, ch2 in zip(chs, chs[1:]):
-        idx1 = s_to_i[ch1]
-        idx2 = s_to_i[ch2]
-        N[idx1, idx2] += 1
+    # Load the words and create a torch tensor
+    words = open("names.txt", "r").read().splitlines()
+    N = torch.zeros((27, 27), dtype=torch.int32)
 
-# Create the lookup table, uncomment the grayed code to visualize the table
+    # Create string to integer and integer to string dictionaries, indexing the . element at position 0
+    chars = sorted(list(set(''.join(words))))
+    s_to_i = {s: i+1 for i, s in enumerate(chars)}
+    s_to_i['.'] = 0
+    i_to_s = {i: s for s, i in s_to_i.items()}
 
-# plt.figure(figsize=(16, 16))
-# plt.imshow(N, cmap='Blues', aspect='auto')
+    # Update the frequency of the particular character in the tensor
+    for w in words:
+        chs = ['.'] + list(w) + ['.']
+        for ch1, ch2 in zip(chs, chs[1:]):
+            idx1 = s_to_i[ch1]
+            idx2 = s_to_i[ch2]
+            N[idx1, idx2] += 1
 
-for i in range(27):
-    for j in range(27):
-        ch_str = i_to_s[i] + i_to_s[j]
-        plt.text(j, i, ch_str, ha="center", va="bottom", color="gray")
-        plt.text(j, i, N[i, j].item(), ha="center", va="top", color="gray")
+    # Create the lookup table, uncomment the grayed code to visualize the table
 
-# plt.axis('off')
-# plt.show()
+    # plt.figure(figsize=(16, 16))
+    # plt.imshow(N, cmap='Blues', aspect='auto')
 
-# Normalizing N
-P = N.float()
-P = P/P.sum(1, keepdim=True)
+    for i in range(27):
+        for j in range(27):
+            ch_str = i_to_s[i] + i_to_s[j]
+            plt.text(j, i, ch_str, ha="center", va="bottom", color="gray")
+            plt.text(j, i, N[i, j].item(), ha="center", va="top", color="gray")
 
-# Sampling from N
-g = torch.Generator().manual_seed(1123581321)
+    # plt.axis('off')
+    # plt.show()
 
-for i in range(20):
-    output_names = []
-    idx = 0
-    while True:
-        p = P[idx]
-        idx = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
-        output_names.append(i_to_s[idx])
-        if not idx:
-            break
-    print(''.join(output_names))
+    # Normalizing N
+    P = N.float()
+    P /= P.sum(1, keepdim=True)
+
+    # Sampling from N
+    g = torch.Generator().manual_seed(1123581321)
+
+    for i in range(20):
+        output_names = []
+        idx = 0
+        while True:
+            p = P[idx]
+            idx = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
+            output_names.append(i_to_s[idx])
+            if not idx:
+                break
+        print(''.join(output_names))
+
+
+bigram()

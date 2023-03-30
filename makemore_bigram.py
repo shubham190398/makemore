@@ -42,8 +42,8 @@ def bigram():
     # plt.axis('off')
     # plt.show()
 
-    # Normalizing N
-    P = N.float()
+    # Normalizing N and smoothening the model to prevent infinity in the log likelihood
+    P = (N+1).float()
     P /= P.sum(1, keepdim=True)
 
     # Sampling from N

@@ -74,7 +74,7 @@ def bigram():
             negative_log_likelihood -= torch.log(prob)
             number_of_words += 1
 
-    print(f'{negative_log_likelihood/number_of_words}')
+    print(f'{negative_log_likelihood/number_of_words:.4f}')
 
 
 bigram()

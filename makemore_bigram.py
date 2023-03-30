@@ -60,5 +60,21 @@ def bigram():
                 break
         print(''.join(output_names))
 
+    # Getting Average negative log likelihood
+
+    negative_log_likelihood = 0.0
+    number_of_words = 0
+
+    for w in words:
+        chs = ['.'] + list(w) + ['.']
+        for ch1, ch2 in zip(chs, chs[1:]):
+            idx1 = s_to_i[ch1]
+            idx2 = s_to_i[ch2]
+            prob = P[idx1, idx2]
+            negative_log_likelihood -= torch.log(prob)
+            number_of_words += 1
+
+    print(f'{negative_log_likelihood/number_of_words}')
+
 
 bigram()

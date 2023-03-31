@@ -81,6 +81,7 @@ def neural_net():
 
             idx = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
             output.append(i_to_s[idx])
+
             if not idx:
                 break
 

@@ -32,6 +32,7 @@ def neural_net():
     chars = sorted(list(set(''.join(words))))
     s_to_i = {s: i + 1 for i, s in enumerate(chars)}
     s_to_i['.'] = 0
+    i_to_s = {i: s for s, i in s_to_i.items()}
 
     # Create one hot encodings for the entire dataset. Cast it to float explicitly as otherwise the datatype is int
     x, y = create_data(words, s_to_i)
@@ -41,6 +42,7 @@ def neural_net():
     # Initialize weights and add gradient to them for loss back propagation
     W = torch.randn((27, 27), requires_grad=True)
     learning_rate = 50
+    regularization_loss = 0.01
     num_epochs = 150
 
     # Training Loop
@@ -54,7 +56,7 @@ def neural_net():
         # Implementing softmax
         counts = logits.exp()
         probs = counts / counts.sum(1, keepdims=True)
-        loss = -probs[torch.arange(num_elements), y].log().mean()
+        loss = -probs[torch.arange(num_elements), y].log().mean() + regularization_loss * (W ** 2).mean()
         print(f"Loss for epoch {i + 1} = {loss.item()}")
 
         # Backward Pass
@@ -63,6 +65,26 @@ def neural_net():
 
         # Update by multiplying learning rate with the gradients and then nudging the data in the opposite direction
         W.data += -learning_rate * W.grad
+
+    # Sampling from the model
+    g = torch.Generator().manual_seed(1123581321)
+
+    for i in range(20):
+        output = []
+        idx = 0
+
+        while True:
+            xenc = F.one_hot(torch.tensor([idx]), num_classes=27).float()
+            logits = xenc @ W
+            counts = logits.exp()
+            p = counts / counts.sum(1, keepdims=True)
+
+            idx = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
+            output.append(i_to_s[idx])
+            if not idx:
+                break
+
+        print(''.join(output))
 
 
 neural_net()

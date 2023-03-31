@@ -1,7 +1,8 @@
 """
 Counting the bigrams in the text. Add special characters at the start and the end for ease of identification.
 Have one token instead of two because obviously a word cannot start with the end token and the start token cannot follow
-a word token.
+a word token. Have a measure of likelihood of a character to make a loss function. We take negative of log likelihood
+to have a monotonically increasing function which needs to be minimized.
 """
 
 import torch

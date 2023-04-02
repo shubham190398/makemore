@@ -4,7 +4,6 @@ Train an MLP for generating new text
 
 import torch
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
 
 
 # Building the training dataset
@@ -43,26 +42,52 @@ def mlp():
     g = torch.Generator().manual_seed(190398)
 
     # Creating the embeddings. Due to the power of tensor indexing, we can directly use the array X
-    C = torch.randn((27, 2), generator=g)
-    emb = C[X]
+    C = torch.randn((27, 2), generator=g, requires_grad=True)
 
     # Constructing hidden layer. Number of inputs will be the number of columns in C * block_size
-    W1 = torch.randn((block_size*2, 100), generator=g)
-    B1 = torch.randn(100, generator=g)
-    H = torch.tanh(emb.view(-1, block_size*2) @ W1 + B1)
+    W1 = torch.randn((block_size*2, 100), generator=g, requires_grad=True)
+    B1 = torch.randn(100, generator=g, requires_grad=True)
 
     # Constructing Output Layer
-    W2 = torch.randn((100, 27), generator=g)
-    B2 = torch.randn(27, generator=g)
+    W2 = torch.randn((100, 27), generator=g, requires_grad=True)
+    B2 = torch.randn(27, generator=g, requires_grad=True)
 
-    # Softmax
-    """
-    logits = H @ W2 + B2
-    counts = logits.exp()
-    probs = counts/counts.sum(1, keepdims=True)
-    loss = -probs[torch.arange(32), Y].log().mean()
-    The above can be done in one step with cross entropy
-    """
-    logits = H @ W2 + B2
-    F.cross_entropy(logits, Y)
+    # List of parameters
+    parameters = [C, W1, B1, W2, B2]
+
+    # Training
+    NUM_EPOCHS = 100
+    LEARNING_RATE = 0.1
+
+    for i in range(NUM_EPOCHS):
+
+        # Constructing minibatch to reduce amount of processing per iteration
+        idx = torch.randint(0, X.shape[0], (32,))
+
+        # Forward Pass
+        """
+        logits = H @ W2 + B2
+        counts = logits.exp()
+        probs = counts/counts.sum(1, keepdims=True)
+        loss = -probs[torch.arange(32), Y].log().mean()
+        The above can be done in one step with cross entropy
+        """
+        emb = C[X[idx]]
+        H = torch.tanh(emb.view(-1, block_size*2) @ W1 + B1)
+        logits = H @ W2 + B2
+        loss = F.cross_entropy(logits, Y[idx])
+
+        print(f"For epoch {i}, loss = {loss.item()}")
+
+        # Backward pass
+        for p in parameters:
+            p.grad = None
+
+        loss.backward()
+
+        for p in parameters:
+            p.data += -LEARNING_RATE * p.grad
+
+
+mlp()
 

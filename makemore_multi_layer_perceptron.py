@@ -39,6 +39,30 @@ def mlp():
     block_size = 3
     X, Y = create_data(words, s_to_i, block_size)
 
+    # Defining a generator for reproducibility
+    g = torch.Generator().manual_seed(190398)
+
     # Creating the embeddings. Due to the power of tensor indexing, we can directly use the array X
-    C = torch.randn((27, 2))
+    C = torch.randn((27, 2), generator=g)
     emb = C[X]
+
+    # Constructing hidden layer. Number of inputs will be the number of columns in C * block_size
+    W1 = torch.randn((block_size*2, 100), generator=g)
+    B1 = torch.randn(100, generator=g)
+    H = torch.tanh(emb.view(-1, block_size*2) @ W1 + B1)
+
+    # Constructing Output Layer
+    W2 = torch.randn((100, 27), generator=g)
+    B2 = torch.randn(27, generator=g)
+
+    # Softmax
+    """
+    logits = H @ W2 + B2
+    counts = logits.exp()
+    probs = counts/counts.sum(1, keepdims=True)
+    loss = -probs[torch.arange(32), Y].log().mean()
+    The above can be done in one step with cross entropy
+    """
+    logits = H @ W2 + B2
+    F.cross_entropy(logits, Y)
+

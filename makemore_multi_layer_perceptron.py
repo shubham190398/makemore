@@ -5,7 +5,7 @@ Train an MLP for generating new text
 import torch
 import torch.nn.functional as F
 import random
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 # Building the training dataset
@@ -34,6 +34,7 @@ def mlp():
     chars = sorted(list(set(''.join(words))))
     s_to_i = {s: i+1 for i, s in enumerate(chars)}
     s_to_i['.'] = 0
+    i_to_s = {i: s for s, i in s_to_i.items()}
 
     """
     Creating the training dataset from the list of words. 80% of the data will be used for training, while 10%
@@ -67,7 +68,7 @@ def mlp():
     parameters = [C, W1, B1, W2, B2]
 
     # Training
-    NUM_EPOCHS = 50000
+    NUM_EPOCHS = 70000
     LEARNING_RATE = 0.1
 
     """
@@ -105,7 +106,7 @@ def mlp():
 
         loss.backward()
 
-        if i == 35000:
+        if i == 50000:
             LEARNING_RATE = 0.01
 
         for p in parameters:
@@ -132,6 +133,16 @@ def mlp():
     logits = H @ W2 + B2
     loss = F.cross_entropy(logits, Yval)
     print(f"Validation loss = {loss.item()}")
+
+    # Visualizing Embeddings
+    plt.figure(figsize=(8,8))
+    plt.scatter(C[:, 0].data, C[:, 1].data, s=200)
+
+    for i in range(C.shape[0]):
+        plt.text(C[i, 0].item(), C[i, 1].item(), i_to_s[i], ha="center", va="center", color="red")
+
+    plt.grid('minor')
+    plt.show()
 
 
 mlp()

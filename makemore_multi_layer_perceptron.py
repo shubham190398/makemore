@@ -54,21 +54,21 @@ def mlp():
     g = torch.Generator().manual_seed(190398)
 
     # Creating the embeddings. Due to the power of tensor indexing, we can directly use the array X
-    C = torch.randn((27, 2), generator=g, requires_grad=True)
+    C = torch.randn((27, 10), generator=g, requires_grad=True)
 
     # Constructing hidden layer. Number of inputs will be the number of columns in C * block_size
-    W1 = torch.randn((block_size*2, 300), generator=g, requires_grad=True)
-    B1 = torch.randn(300, generator=g, requires_grad=True)
+    W1 = torch.randn((block_size*10, 200), generator=g, requires_grad=True)
+    B1 = torch.randn(200, generator=g, requires_grad=True)
 
     # Constructing Output Layer
-    W2 = torch.randn((300, 27), generator=g, requires_grad=True)
+    W2 = torch.randn((200, 27), generator=g, requires_grad=True)
     B2 = torch.randn(27, generator=g, requires_grad=True)
 
     # List of parameters
     parameters = [C, W1, B1, W2, B2]
 
     # Training
-    NUM_EPOCHS = 70000
+    NUM_EPOCHS = 200000
     LEARNING_RATE = 0.1
 
     """
@@ -77,15 +77,16 @@ def mlp():
     learning_rate_exponent = torch.linspace(-3, 0, 1000)
     learning_rates = 10**learning_rate_exponent
     learning_rates_i = []
-    loss_i = []
     
     After plotting the graph, it was determined that the optimum learning rate is around 0.1
     """
+    step_i = []
+    loss_i = []
 
     for i in range(NUM_EPOCHS):
 
         # Constructing minibatch to reduce amount of processing per iteration
-        idx = torch.randint(0, Xtrain.shape[0], (32,))
+        idx = torch.randint(0, Xtrain.shape[0], (64,))
 
         # Forward Pass
         """
@@ -96,7 +97,7 @@ def mlp():
         The above can be done in one step with cross entropy
         """
         emb = C[Xtrain[idx]]
-        H = torch.tanh(emb.view(-1, block_size*2) @ W1 + B1)
+        H = torch.tanh(emb.view(-1, block_size*10) @ W1 + B1)
         logits = H @ W2 + B2
         loss = F.cross_entropy(logits, Ytrain[idx])
 
@@ -106,8 +107,11 @@ def mlp():
 
         loss.backward()
 
-        if i == 50000:
+        if i == 100000:
             LEARNING_RATE = 0.01
+
+        if i == 150000:
+            LEARNING_RATE = 0.005
 
         for p in parameters:
             p.data += -LEARNING_RATE * p.grad
@@ -115,26 +119,28 @@ def mlp():
         """
         # Tracking stats for learning rates
         learning_rates_i.append(learning_rate_exponent[i])
-        loss_i.append(loss.item())
         """
+        step_i.append(i)
+        loss_i.append(loss.log10().item())
 
-    # plt.plot(learning_rates_i, loss_i)
-    # plt.show()
+    plt.plot(step_i, loss_i)
+    plt.show()
 
     # Evaluation
     emb = C[Xtrain]
-    H = torch.tanh(emb.view(-1, 6) @ W1 + B1)
+    H = torch.tanh(emb.view(-1, block_size*10) @ W1 + B1)
     logits = H @ W2 + B2
     loss = F.cross_entropy(logits, Ytrain)
     print(f"Training loss = {loss.item()}")
 
     emb = C[Xval]
-    H = torch.tanh(emb.view(-1, 6) @ W1 + B1)
+    H = torch.tanh(emb.view(-1, block_size*10) @ W1 + B1)
     logits = H @ W2 + B2
     loss = F.cross_entropy(logits, Yval)
     print(f"Validation loss = {loss.item()}")
 
-    # Visualizing Embeddings
+    """
+    # Visualizing Embeddings for 2 Dimensional case
     plt.figure(figsize=(8,8))
     plt.scatter(C[:, 0].data, C[:, 1].data, s=200)
 
@@ -143,6 +149,7 @@ def mlp():
 
     plt.grid('minor')
     plt.show()
+    """
 
 
 mlp()

@@ -4,6 +4,7 @@ Train an MLP for generating new text
 
 import torch
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 
 # Building the training dataset
@@ -56,8 +57,19 @@ def mlp():
     parameters = [C, W1, B1, W2, B2]
 
     # Training
-    NUM_EPOCHS = 100
+    NUM_EPOCHS = 1000
     LEARNING_RATE = 0.1
+
+    """
+    Finding optimum learning rate
+
+    learning_rate_exponent = torch.linspace(-3, 0, 1000)
+    learning_rates = 10**learning_rate_exponent
+    learning_rates_i = []
+    loss_i = []
+    
+    After plotting the graph, it was determined that the optimum learning rate is around 0.1
+    """
 
     for i in range(NUM_EPOCHS):
 
@@ -88,6 +100,14 @@ def mlp():
         for p in parameters:
             p.data += -LEARNING_RATE * p.grad
 
+        """
+        # Tracking stats for learning rates
+        learning_rates_i.append(learning_rate_exponent[i])
+        loss_i.append(loss.item())
+        """
+
+    # plt.plot(learning_rates_i, loss_i)
+    # plt.show()
+
 
 mlp()
-

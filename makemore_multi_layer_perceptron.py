@@ -4,7 +4,8 @@ Train an MLP for generating new text
 
 import torch
 import torch.nn.functional as F
-import matplotlib.pyplot as plt
+import random
+# import matplotlib.pyplot as plt
 
 
 # Building the training dataset
@@ -33,11 +34,20 @@ def mlp():
     chars = sorted(list(set(''.join(words))))
     s_to_i = {s: i+1 for i, s in enumerate(chars)}
     s_to_i['.'] = 0
-    i_to_s = {i: s for s, i in s_to_i.items()}
 
-    # Creating the training dataset from the list of words
+    """
+    Creating the training dataset from the list of words. 80% of the data will be used for training, while 10%
+    will be used for validation and 10% will be used for testing
+    """
+    random.seed(42)
+    random.shuffle(words)
+    n1 = int(0.8 * len(words))
+    n2 = int(0.9 * len(words))
+
     block_size = 3
-    X, Y = create_data(words, s_to_i, block_size)
+    Xtrain, Ytrain = create_data(words[:n1], s_to_i, block_size)
+    Xval, Yval = create_data(words[n1:n2], s_to_i, block_size)
+    Xtest, Ytest = create_data(words[n2:], s_to_i, block_size)
 
     # Defining a generator for reproducibility
     g = torch.Generator().manual_seed(190398)
@@ -57,7 +67,7 @@ def mlp():
     parameters = [C, W1, B1, W2, B2]
 
     # Training
-    NUM_EPOCHS = 1000
+    NUM_EPOCHS = 40000
     LEARNING_RATE = 0.1
 
     """
@@ -74,7 +84,7 @@ def mlp():
     for i in range(NUM_EPOCHS):
 
         # Constructing minibatch to reduce amount of processing per iteration
-        idx = torch.randint(0, X.shape[0], (32,))
+        idx = torch.randint(0, Xtrain.shape[0], (32,))
 
         # Forward Pass
         """
@@ -84,10 +94,10 @@ def mlp():
         loss = -probs[torch.arange(32), Y].log().mean()
         The above can be done in one step with cross entropy
         """
-        emb = C[X[idx]]
+        emb = C[Xtrain[idx]]
         H = torch.tanh(emb.view(-1, block_size*2) @ W1 + B1)
         logits = H @ W2 + B2
-        loss = F.cross_entropy(logits, Y[idx])
+        loss = F.cross_entropy(logits, Ytrain[idx])
 
         print(f"For epoch {i}, loss = {loss.item()}")
 
@@ -96,6 +106,9 @@ def mlp():
             p.grad = None
 
         loss.backward()
+
+        if i == 25000:
+            LEARNING_RATE = 0.01
 
         for p in parameters:
             p.data += -LEARNING_RATE * p.grad

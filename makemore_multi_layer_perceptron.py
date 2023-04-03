@@ -151,5 +151,24 @@ def mlp():
     plt.show()
     """
 
+    # Sampling from the model
+
+    for _ in range(20):
+        output = []
+        context = [0] * block_size
+
+        while True:
+            emb = C[torch.tensor(context)]
+            H = torch.tanh(emb.view(1, -1) @ W1 + B1)
+            logits = H @ W2 + B2
+            probs = F.softmax(logits, dim=1)
+            idx = torch.multinomial(probs, num_samples=1, generator=g).item()
+            context = context[1:] + [idx]
+            output.append(idx)
+            if not idx:
+                break
+
+        print(''.join(i_to_s[i] for i in output[:len(output)-1]))
+
 
 mlp()

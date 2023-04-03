@@ -56,18 +56,18 @@ def mlp():
     C = torch.randn((27, 2), generator=g, requires_grad=True)
 
     # Constructing hidden layer. Number of inputs will be the number of columns in C * block_size
-    W1 = torch.randn((block_size*2, 100), generator=g, requires_grad=True)
-    B1 = torch.randn(100, generator=g, requires_grad=True)
+    W1 = torch.randn((block_size*2, 300), generator=g, requires_grad=True)
+    B1 = torch.randn(300, generator=g, requires_grad=True)
 
     # Constructing Output Layer
-    W2 = torch.randn((100, 27), generator=g, requires_grad=True)
+    W2 = torch.randn((300, 27), generator=g, requires_grad=True)
     B2 = torch.randn(27, generator=g, requires_grad=True)
 
     # List of parameters
     parameters = [C, W1, B1, W2, B2]
 
     # Training
-    NUM_EPOCHS = 40000
+    NUM_EPOCHS = 50000
     LEARNING_RATE = 0.1
 
     """
@@ -99,15 +99,13 @@ def mlp():
         logits = H @ W2 + B2
         loss = F.cross_entropy(logits, Ytrain[idx])
 
-        print(f"For epoch {i}, loss = {loss.item()}")
-
         # Backward pass
         for p in parameters:
             p.grad = None
 
         loss.backward()
 
-        if i == 25000:
+        if i == 35000:
             LEARNING_RATE = 0.01
 
         for p in parameters:
@@ -121,6 +119,19 @@ def mlp():
 
     # plt.plot(learning_rates_i, loss_i)
     # plt.show()
+
+    # Evaluation
+    emb = C[Xtrain]
+    H = torch.tanh(emb.view(-1, 6) @ W1 + B1)
+    logits = H @ W2 + B2
+    loss = F.cross_entropy(logits, Ytrain)
+    print(f"Training loss = {loss.item()}")
+
+    emb = C[Xval]
+    H = torch.tanh(emb.view(-1, 6) @ W1 + B1)
+    logits = H @ W2 + B2
+    loss = F.cross_entropy(logits, Yval)
+    print(f"Validation loss = {loss.item()}")
 
 
 mlp()

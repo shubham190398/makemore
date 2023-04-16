@@ -74,12 +74,23 @@ def rnn():
     C = Embeddings
     W1, B1 = The Hidden Layer
     W2, B2 = The Output Layer
+    W1 is multiplied by 0.2 and B1 by 0.01 to prevent tanh from saturating leading to dead neurons
     W2 is multiplied by 0.01 to ensure its a small number while B2 is initialized as 0 so that the initial loss
     is not very big
+    
+    How to determine these factors? Let's take an example:
+    x = torch.randn(1000, 10)
+    w = torch.randn(10, 200)
+    h = x @ w
+    print(x.mean(), x.std())
+    print(h.mean(), h.std())
+    
+    As can be seen, the std deviation of h booms up. So we need to scale our weights down appropriately. A convenient
+    factor to do so would be gain/sqrt(fan_in) so (5/3)/sqrt(30)=0.3 for our case
     """
     g = torch.Generator().manual_seed(42)
     C = torch.randn((vocab_size, n_embd), generator=g)
-    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g) * 0.2
+    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g) * (5/3)/((n_embd * block_size)**0.5)
     B1 = torch.randn(n_hidden, generator=g) * 0.01
     W2 = torch.randn((n_hidden, vocab_size), generator=g) * 0.01
     B2 = torch.randn(vocab_size, generator=g) * 0

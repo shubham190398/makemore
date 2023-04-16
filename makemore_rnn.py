@@ -28,13 +28,13 @@ def create_data(words, s_to_i, block_size):
 
 # Helper function for calculating the loss in a split
 @torch.no_grad()
-def split_loss(X, Y, parameters):
+def split_loss(X, Y, parameters, BN_MEAN, BN_STD):
     C, W1, B1, W2, B2, BN_GAIN, BN_BIAS = parameters[0], parameters[1], parameters[2], parameters[3], parameters[4],\
         parameters[5], parameters[6]
     emb = C[X]
     emb_cat = emb.view(emb.shape[0], -1)
     h_preact = emb_cat @ W1 + B1
-    h_preact = BN_GAIN * ((h_preact - h_preact.mean(0, keepdim=True)) / h_preact.std(0, keepdim=True)) + BN_BIAS
+    h_preact = BN_GAIN * ((h_preact - BN_MEAN) / BN_STD) + BN_BIAS
     h = torch.tanh(h_preact)
     logits = h @ W2 + B2
     loss = F.cross_entropy(logits, Y)
@@ -163,12 +163,22 @@ def rnn():
         plt.imshow(h.abs() > 0.99, cmap='gray', interpolation='nearest')
         """
 
+    """
+    Calibrate batch normalization at the end of training
+    """
+    with torch.no_grad():
+        emb = C[Xtrain]
+        emb_cat = emb.view(emb.shape[0], -1)
+        h_preact = emb_cat @ W1 + B1
+        BN_MEAN = h_preact.mean(0, keepdim=True)
+        BN_STD = h_preact.std(0, keepdim=True)
+
     # Printing split losses
     print("Training loss")
-    split_loss(Xtrain, Ytrain, parameters)
+    split_loss(Xtrain, Ytrain, parameters, BN_MEAN, BN_STD)
 
     print("Validation loss")
-    split_loss(Xval, Yval, parameters)
+    split_loss(Xval, Yval, parameters, BN_MEAN, BN_STD)
 
     # Sampling from the model
     g = torch.Generator().manual_seed(5813)

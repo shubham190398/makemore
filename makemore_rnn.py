@@ -6,6 +6,7 @@ Using an RNN for predicting names
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import random
 
 
 # Helper function to create data
@@ -34,3 +35,42 @@ def rnn():
     s_to_i = {s: i + 1 for i, s in enumerate(chars)}
     s_to_i['.'] = 0
     i_to_s = {i: s for s, i in s_to_i.items()}
+    vocab_size = len(i_to_s)
+
+    """
+        Creating the training dataset from the list of words. 80% of the data will be used for training, while 10%
+        will be used for validation and 10% will be used for testing
+    """
+    random.seed(42)
+    random.shuffle(words)
+    n1 = int(0.8 * len(words))
+    n2 = int(0.9 * len(words))
+
+    block_size = 3
+    Xtrain, Ytrain = create_data(words[:n1], s_to_i, block_size)
+    Xval, Yval = create_data(words[n1:n2], s_to_i, block_size)
+    Xtest, Ytest = create_data(words[n2:], s_to_i, block_size)
+
+    # Defining the embedding and hidden layers
+    n_embd = 10
+    n_hidden = 200
+
+    """
+    Defining the same parameters used in MLP like:
+    Generator = for reproducibility
+    C = Embeddings
+    W1, B1 = The Hidden Layer
+    W2, B2 = The Output Layer
+    """
+    g = torch.Generator().manual_seed(1123)
+    C = torch.randn((vocab_size, n_embd), generator=g, requires_grad=True)
+    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g, requires_grad=True)
+    B1 = torch.randn(n_hidden, generator=g, requires_grad=True)
+    W2 = torch.randn((n_hidden, vocab_size), generator=g, requires_grad=True)
+    B2 = torch.randn(vocab_size, generator=g, requires_grad=True)
+
+    parameters = [C, W1, B1, W2, B2]
+    print("Total number of parameters in this neural network is: ",
+          sum(p.nelement() for p in parameters))
+
+

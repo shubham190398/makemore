@@ -90,7 +90,7 @@ def create_data(words, s_to_i, block_size):
 
 
 # RNN Body
-def rnn():
+def mlp_pytorch():
     # Load the words and create a torch tensor
     words = open("names.txt", "r").read().splitlines()
 
@@ -165,8 +165,11 @@ def rnn():
         loss = F.cross_entropy(x, Yb)
 
         # Backward Pass
+        """
+        Uncomment this section for visualizing
         for layer in layers:
-            layer.out.retain_grad()
+            layer.out.retain_grad()   
+        """
         for p in parameters:
             p.grad = None
         loss.backward()
@@ -184,8 +187,6 @@ def rnn():
         with torch.no_grad():
             ud_ratio.append([(LEARNING_RATE * p.grad.std() / p.data.std()).log10().item() for p in parameters])
 
-        if i > 1000:
-            break
     """
     Visualizing the forward pass
     
@@ -240,4 +241,4 @@ def rnn():
     """
 
 
-rnn()
+mlp_pytorch()

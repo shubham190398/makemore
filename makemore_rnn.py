@@ -29,10 +29,13 @@ def create_data(words, s_to_i, block_size):
 # Helper function for calculating the loss in a split
 @torch.no_grad()
 def split_loss(X, Y, parameters):
-    C, W1, B1, W2, B2 = parameters[0], parameters[1], parameters[2], parameters[3], parameters[4]
+    C, W1, B1, W2, B2, BN_GAIN, BN_BIAS = parameters[0], parameters[1], parameters[2], parameters[3], parameters[4],\
+        parameters[5], parameters[6]
     emb = C[X]
     emb_cat = emb.view(emb.shape[0], -1)
-    h = torch.tanh(emb_cat @ W1 + B1)
+    h_preact = emb_cat @ W1 + B1
+    h_preact = BN_GAIN * ((h_preact - h_preact.mean(0, keepdim=True)) / h_preact.std(0, keepdim=True)) + BN_BIAS
+    h = torch.tanh(h_preact)
     logits = h @ W2 + B2
     loss = F.cross_entropy(logits, Y)
     print(loss.item())
@@ -95,7 +98,10 @@ def rnn():
     W2 = torch.randn((n_hidden, vocab_size), generator=g) * 0.01
     B2 = torch.randn(vocab_size, generator=g) * 0
 
-    parameters = [C, W1, B1, W2, B2]
+    BN_GAIN = torch.ones((1, n_hidden))
+    BN_BIAS = torch.zeros((1, n_hidden))
+
+    parameters = [C, W1, B1, W2, B2, BN_GAIN, BN_BIAS]
     print("Total number of parameters in this neural network is: ",
           sum(p.nelement() for p in parameters))
     for p in parameters:
@@ -117,11 +123,15 @@ def rnn():
         # Forward Pass
         """
         We embed the characters into vectors and then concatenate the vectors.
-        The hidden layers are pre-activated, while the loss function is defined as a cross-entropy loss
+        The hidden layers are pre-activated, while the loss function is defined as a cross-entropy loss.
+        The hidden layers are batch normalized, but need to be multiplied by a batch normalization gain and
+        added to a batch normalization bias to ensure that there is some scope for the inputs to
+        move around
         """
         emb = C[Xb]
         emb_cat = emb.view(emb.shape[0], -1)
         h_preact = emb_cat @ W1 + B1
+        h_preact = BN_GAIN * ((h_preact - h_preact.mean(0, keepdim=True)) / h_preact.std(0, keepdim=True)) + BN_BIAS
         h = torch.tanh(h_preact)
         logits = h @ W2 + B2
         loss = F.cross_entropy(logits, Yb)

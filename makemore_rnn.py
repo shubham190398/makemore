@@ -130,10 +130,12 @@ def rnn():
         added to a batch normalization bias to ensure that there is some scope for the inputs to
         move around
         """
+        # Weight layer
         emb = C[Xb]
         emb_cat = emb.view(emb.shape[0], -1)
         h_preact = emb_cat @ W1  # + B1
 
+        # Batch normalization layer
         bn_mean_i = h_preact.mean(0, keepdim=True)
         bn_std_i = h_preact.std(0, keepdim=True)
         h_preact = BN_GAIN * ((h_preact - bn_mean_i) / bn_std_i) + BN_BIAS
@@ -143,6 +145,7 @@ def rnn():
             BN_MEAN = 0.999 * BN_MEAN + 0.001 * bn_mean_i
             BN_STD = 0.999 * BN_STD + 0.001 * bn_std_i
 
+        # Non-linearity
         h = torch.tanh(h_preact)
         logits = h @ W2 + B2
         loss = F.cross_entropy(logits, Yb)

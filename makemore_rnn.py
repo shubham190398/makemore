@@ -73,4 +73,35 @@ def rnn():
     print("Total number of parameters in this neural network is: ",
           sum(p.nelement() for p in parameters))
 
+    # Training parameters
+    max_steps = 200000
+    batch_size = 32
+    loss_i = []
+
+    # Training Loop
+    for i in range(max_steps):
+
+        # Constructing minibatch
+        idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
+        Xb, Yb = Xtrain[idx], Ytrain[idx]
+
+        # Forward Pass
+        """
+        We embed the characters into vectors and then concatenate the vectors.
+        The hidden layers are pre-activated, while the loss function is defined as a cross-entropy loss
+        """
+        emb = C[Xb]
+        emb_cat = emb.view(emb.shape[0], -1)
+        h_preact = emb_cat @ W1 + B1
+        h = torch.tanh(h_preact)
+        logits = h @ W2 + B2
+        loss = F.cross_entropy(logits, Yb)
+
+        # Backward Pass
+        for p in parameters:
+            p.grad = None
+
+        loss.backward()
+
+        # Update
 

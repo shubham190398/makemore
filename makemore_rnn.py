@@ -100,6 +100,8 @@ def rnn():
 
     BN_GAIN = torch.ones((1, n_hidden))
     BN_BIAS = torch.zeros((1, n_hidden))
+    BN_MEAN = torch.zeros((1, n_hidden))
+    BN_STD = torch.ones((1, n_hidden))
 
     parameters = [C, W1, B1, W2, B2, BN_GAIN, BN_BIAS]
     print("Total number of parameters in this neural network is: ",
@@ -131,7 +133,15 @@ def rnn():
         emb = C[Xb]
         emb_cat = emb.view(emb.shape[0], -1)
         h_preact = emb_cat @ W1 + B1
-        h_preact = BN_GAIN * ((h_preact - h_preact.mean(0, keepdim=True)) / h_preact.std(0, keepdim=True)) + BN_BIAS
+        bn_mean_i = h_preact.mean(0, keepdim=True)
+        bn_std_i = h_preact.std(0, keepdim=True)
+        h_preact = BN_GAIN * ((h_preact - bn_mean_i) / bn_std_i) + BN_BIAS
+
+        # Updating the Batch Normalization means and standard deviations
+        with torch.no_grad():
+            BN_MEAN = 0.999 * BN_MEAN + 0.001 * bn_mean_i
+            BN_STD = 0.999 * BN_STD + 0.001 * bn_std_i
+
         h = torch.tanh(h_preact)
         logits = h @ W2 + B2
         loss = F.cross_entropy(logits, Yb)
@@ -165,7 +175,6 @@ def rnn():
 
     """
     Calibrate batch normalization at the end of training
-    """
     with torch.no_grad():
         emb = C[Xtrain]
         emb_cat = emb.view(emb.shape[0], -1)
@@ -173,6 +182,7 @@ def rnn():
         BN_MEAN = h_preact.mean(0, keepdim=True)
         BN_STD = h_preact.std(0, keepdim=True)
 
+    """
     # Printing split losses
     print("Training loss")
     split_loss(Xtrain, Ytrain, parameters, BN_MEAN, BN_STD)

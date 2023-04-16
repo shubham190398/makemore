@@ -128,6 +128,13 @@ def rnn():
 
         loss_i.append(loss.log10().item())
 
+    # Printing split losses
+    print("Training loss")
+    split_loss(Xtrain, Ytrain, parameters)
+
+    print("Validation loss")
+    split_loss(Xval, Yval, parameters)
+
     # Sampling from the model
     g = torch.Generator().manual_seed(5813)
 

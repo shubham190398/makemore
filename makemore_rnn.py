@@ -108,7 +108,7 @@ def rnn():
         LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
 
         for p in parameters:
-            p.data = -lr * p.grad
+            p.data = -LEARNING_RATE * p.grad
 
         # Track stats
         if not i % print_every:

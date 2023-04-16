@@ -127,3 +127,25 @@ def rnn():
             print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
 
         loss_i.append(loss.log10().item())
+
+    # Sampling from the model
+    g = torch.Generator().manual_seed(5813)
+
+    for _ in range(20):
+        context = [0]*block_size
+        output = []
+
+        while True:
+            emb = C[torch.tensor([context])]
+            h = torch.tanh(emb.view(1, -1) @ W1 + B1)
+            logits = h @ W2 + B2
+            probs = F.softmax(logits, dim=1)
+
+            idx = torch.multinomial(probs, num_samples=1, generator=g).item()
+            context = context[1:] + [idx]
+            output.append(idx)
+
+            if not idx:
+                break
+
+        print(''.join(i_to_s[i] for i in output))

@@ -74,16 +74,18 @@ def rnn():
     W1, B1 = The Hidden Layer
     W2, B2 = The Output Layer
     """
-    g = torch.Generator().manual_seed(1123)
-    C = torch.randn((vocab_size, n_embd), generator=g, requires_grad=True)
-    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g, requires_grad=True)
-    B1 = torch.randn(n_hidden, generator=g, requires_grad=True)
-    W2 = torch.randn((n_hidden, vocab_size), generator=g, requires_grad=True)
-    B2 = torch.randn(vocab_size, generator=g, requires_grad=True)
+    g = torch.Generator().manual_seed(42)
+    C = torch.randn((vocab_size, n_embd), generator=g)
+    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g)
+    B1 = torch.randn(n_hidden, generator=g)
+    W2 = torch.randn((n_hidden, vocab_size), generator=g)
+    B2 = torch.randn(vocab_size, generator=g)
 
     parameters = [C, W1, B1, W2, B2]
     print("Total number of parameters in this neural network is: ",
           sum(p.nelement() for p in parameters))
+    for p in parameters:
+        p.requires_grad = True
 
     # Training parameters
     max_steps = 200000
@@ -120,7 +122,7 @@ def rnn():
         LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
 
         for p in parameters:
-            p.data = -LEARNING_RATE * p.grad
+            p.data += -LEARNING_RATE * p.grad
 
         # Track stats
         if not i % print_every:
@@ -156,3 +158,6 @@ def rnn():
                 break
 
         print(''.join(i_to_s[i] for i in output))
+
+
+rnn()

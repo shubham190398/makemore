@@ -79,8 +79,8 @@ def rnn():
     """
     g = torch.Generator().manual_seed(42)
     C = torch.randn((vocab_size, n_embd), generator=g)
-    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g)
-    B1 = torch.randn(n_hidden, generator=g)
+    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g) * 0.2
+    B1 = torch.randn(n_hidden, generator=g) * 0.01
     W2 = torch.randn((n_hidden, vocab_size), generator=g) * 0.01
     B2 = torch.randn(vocab_size, generator=g) * 0
 
@@ -136,6 +136,10 @@ def rnn():
         Visualizing the working of tanh on the preactivated hidden layer
         plt.hist(h.view(-1).tolist(), 60)
         plt.show()
+        """
+        """
+        Visualizing when the tanh is very close to 1
+        plt.imshow(h.abs() > 0.99, cmap='gray', interpolation='nearest')
         """
 
     # Printing split losses

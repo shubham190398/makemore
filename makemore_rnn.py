@@ -76,6 +76,7 @@ def rnn():
     # Training parameters
     max_steps = 200000
     batch_size = 32
+    print_every = 10000
     loss_i = []
 
     # Training Loop
@@ -104,4 +105,13 @@ def rnn():
         loss.backward()
 
         # Update
+        LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
 
+        for p in parameters:
+            p.data = -lr * p.grad
+
+        # Track stats
+        if not i % print_every:
+            print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
+
+        loss_i.append(loss.log10().item())

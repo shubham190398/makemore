@@ -157,7 +157,7 @@ def rnn():
             if not idx:
                 break
 
-        print(''.join(i_to_s[i] for i in output))
+        print(''.join(i_to_s[i] for i in output[:len(output)-1]))
 
 
 rnn()

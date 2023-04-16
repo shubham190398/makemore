@@ -149,6 +149,7 @@ def rnn():
     batch_size = 32
     loss_i = []
     print_every = 10000
+    ud_ratio = []
 
     for i in range(max_steps):
 
@@ -180,7 +181,11 @@ def rnn():
             print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
         loss_i.append(loss.log10().item())
 
-        break
+        with torch.no_grad():
+            ud_ratio.append([(LEARNING_RATE * p.grad.std() / p.data.std()).log10().item() for p in parameters])
+
+        if i > 1000:
+            break
     """
     Visualizing the forward pass
     
@@ -215,6 +220,22 @@ def rnn():
 
     plt.legend(legends)
     plt.title('Activation distribution')
+    plt.show()
+    """
+
+    """
+    Visualizing the update to data ratio
+    
+    plt.figure(figsize=(20, 4))
+    legends = []
+
+    for i, p in enumerate(parameters):
+        if p.ndim == 2:
+            plt.plot([ud_ratio[j][i] for j in range(len(ud_ratio))])
+            legends.append(f"param {i}")
+
+    plt.plot([0, len(ud_ratio)], [-3, -3], 'k')
+    plt.legend(legends)
     plt.show()
     """
 

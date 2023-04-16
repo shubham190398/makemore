@@ -42,7 +42,7 @@ def split_loss(X, Y, parameters, BN_MEAN, BN_STD):
 
 
 # RNN Body
-def rnn():
+def mlp_improved():
     # Load the words and create a torch tensor
     words = open("names.txt", "r").read().splitlines()
 
@@ -217,4 +217,4 @@ def rnn():
         print(''.join(i_to_s[i] for i in output[:len(output)-1]))
 
 
-rnn()
+mlp_improved()

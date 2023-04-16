@@ -6,7 +6,7 @@ A much more indepth neural network implemented with PyTorch
 import torch
 import random
 import torch.nn.functional as F
-
+import matplotlib.pyplot as plt
 
 # Global variable
 g = torch.Generator().manual_seed(1234)
@@ -181,3 +181,27 @@ def rnn():
         loss_i.append(loss.log10().item())
 
         break
+    """
+    Visualizing the forward pass
+    plt.figure(figsize=(20, 4))
+    legends = []
+    for i, layer in enumerate(layers[:-1]):
+        if isinstance(layer, Tanh):
+            t = layer.out
+            print(f"layer {i} {layer.__class__.__name__}: mean = {t.mean()}, std = {t.std()},"
+                  f" saturation = {(t.abs() > 0.97).float().mean()*100}%")
+            hy, hx = torch.histogram(t, density=True)
+            plt.plot(hx[:-1].detach(), hy.detach())
+            legends.append(f"layer {i} ({layer.__class__.__name__}")
+
+    plt.legend(legends)
+    plt.title('Activation distribution')
+    plt.show()
+    """
+
+    """
+    Visualizing the backward pass
+    """
+
+
+rnn()

@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import random
+import matplotlib.pyplot as plt
 
 
 # Helper function to create data
@@ -131,6 +132,11 @@ def rnn():
             print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
 
         loss_i.append(loss.log10().item())
+        """
+        Visualizing the working of tanh on the preactivated hidden layer
+        plt.hist(h.view(-1).tolist(), 60)
+        plt.show()
+        """
 
     # Printing split losses
     print("Training loss")

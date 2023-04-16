@@ -69,8 +69,7 @@ class Tanh:
         self.out = torch.tanh(x)
         return self.out
 
-    @staticmethod
-    def parameters():
+    def parameters(self):
         return []
 
 
@@ -144,3 +143,41 @@ def rnn():
     # Adding gradient computation
     for p in parameters:
         p.requires_grad = True
+
+    # Training the neural network
+    max_steps = 200000
+    batch_size = 32
+    loss_i = []
+    print_every = 10000
+
+    for i in range(max_steps):
+
+        # Constructing minibatch
+        idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
+        Xb, Yb = Xtrain[idx], Ytrain[idx]
+
+        # Forward Pass
+        emb = C[Xb]
+        x = emb.view(emb.shape[0], -1)
+        for layer in layers:
+            x = layer(x)
+        loss = F.cross_entropy(x, Yb)
+
+        # Backward Pass
+        for layer in layers:
+            layer.out.retain_grad()
+        for p in parameters:
+            p.grad = None
+        loss.backward()
+
+        # Update
+        LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
+        for p in parameters:
+            p.data += -LEARNING_RATE * p.grad
+
+        # Tracking stats
+        if not i % print_every:
+            print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
+        loss_i.append(loss.log10().item())
+
+        break

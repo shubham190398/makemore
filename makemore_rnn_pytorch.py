@@ -121,17 +121,17 @@ def rnn():
 
     C = torch.randn((vocab_size, n_emb), generator=g)
     layers = [
-        Linear(n_emb * block_size, n_hidden), Tanh(),
-        Linear(n_hidden, n_hidden), Tanh(),
-        Linear(n_hidden, n_hidden), Tanh(),
-        Linear(n_hidden, n_hidden), Tanh(),
-        Linear(n_hidden, n_hidden), Tanh(),
-        Linear(n_hidden, vocab_size),
+        Linear(n_emb * block_size, n_hidden), BatchNorm1d(n_hidden), Tanh(),
+        Linear(n_hidden, n_hidden), BatchNorm1d(n_hidden), Tanh(),
+        Linear(n_hidden, n_hidden), BatchNorm1d(n_hidden), Tanh(),
+        Linear(n_hidden, n_hidden), BatchNorm1d(n_hidden), Tanh(),
+        Linear(n_hidden, n_hidden), BatchNorm1d(n_hidden), Tanh(),
+        Linear(n_hidden, vocab_size), BatchNorm1d(vocab_size),
     ]
 
     # Initializing the layers
     with torch.no_grad():
-        layers[-1].weight *= 0.1
+        layers[-1].gamma *= 0.1
 
         for layer in layers[:-1]:
             if isinstance(layer, Linear):

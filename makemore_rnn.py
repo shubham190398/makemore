@@ -25,6 +25,18 @@ def create_data(words, s_to_i, block_size):
     return torch.tensor(X), torch.tensor(Y)
 
 
+# Helper function for calculating the loss in a split
+@torch.no_grad()
+def split_loss(X, Y, parameters):
+    C, W1, B1, W2, B2 = parameters[0], parameters[1], parameters[2], parameters[3], parameters[4]
+    emb = C[X]
+    emb_cat = emb.view(emb.shape[0], -1)
+    h = torch.tanh(emb_cat @ W1 + B1)
+    logits = h @ W2 + B2
+    loss = F.cross_entropy(logits, Y)
+    print(loss.item())
+
+
 # RNN Body
 def rnn():
     # Load the words and create a torch tensor

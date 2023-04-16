@@ -132,7 +132,8 @@ def rnn():
         """
         emb = C[Xb]
         emb_cat = emb.view(emb.shape[0], -1)
-        h_preact = emb_cat @ W1 + B1
+        h_preact = emb_cat @ W1  # + B1
+
         bn_mean_i = h_preact.mean(0, keepdim=True)
         bn_std_i = h_preact.std(0, keepdim=True)
         h_preact = BN_GAIN * ((h_preact - bn_mean_i) / bn_std_i) + BN_BIAS

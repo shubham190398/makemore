@@ -1,5 +1,5 @@
 """
-Using an RNN for predicting names
+Improving the MLP with Batch Normalization for predicting names
 """
 
 # Importing Dependencies

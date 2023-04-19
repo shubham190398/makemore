@@ -1,5 +1,5 @@
 """
-A much more indepth neural network implemented with PyTorch
+A much more indepth MLP implemented with PyTorch
 """
 
 # Importing dependencies

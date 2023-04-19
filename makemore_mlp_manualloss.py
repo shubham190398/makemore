@@ -126,6 +126,15 @@ def mlp_manual_loss():
     h_pre_bn = emb_cat @ W1 + B1
 
     # Batch Norm Layer
+    """
+    The batch normalization operations can be replaced by the following:
+    h_pre_act = BN_GAIN * (h_pre_bn - h_pre_bn.mean(0, keepdim=True)) / torch.sqrt(h_pre_bn.var(0, keepdim=True,
+                                                                                    unbiased=True))
+    
+    The backpropagation for the above is:
+    d_h_pre_bn = BN_GAIN * bn_var_inv/N * (N * d_h_pre_act - d_h_pre_act.sum(0) - 
+                                        N/(N-1)*bn_raw*(d_h_pre_act*bn_raw).sum(0))
+    """
     bn_mean_i = (1/N) * h_pre_bn.sum(0, keepdim=True)
     bn_diff = h_pre_bn - bn_mean_i
     bn_diff2 = bn_diff ** 2
@@ -142,6 +151,15 @@ def mlp_manual_loss():
     logits = h @ W2 + B2
 
     # Cross Entropy Loss
+    """
+    The below expressions can be approximated in one step:
+    loss = F.cross_entropy(logits, Yb)
+    
+    In this case, the backpropagation will be: 
+    d_logits = F.softmax(logits, 1)
+    d_logits[range(n), Yb] -= 1
+    d_logits /= N
+    """
     logit_maxes = logits.max(1, keepdim=True).values
     norm_logits = logits - logit_maxes
     counts = norm_logits.exp()

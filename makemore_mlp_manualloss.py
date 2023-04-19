@@ -97,8 +97,6 @@ def mlp_manual_loss():
 
     BN_GAIN = torch.ones((1, n_hidden)) * 0.1 + 1.0
     BN_BIAS = torch.zeros((1, n_hidden)) * 0.1
-    BN_MEAN = torch.zeros((1, n_hidden))
-    BN_STD = torch.ones((1, n_hidden))
 
     parameters = [C, W1, B1, W2, B2, BN_GAIN, BN_BIAS]
     print("Total number of parameters in this neural network is: ",
@@ -109,11 +107,8 @@ def mlp_manual_loss():
     # Training parameters
     N = 32
     batch_size = 32
-    print_every = 10000
-    loss_i = []
 
-    # Training Loop
-
+    # One-step Training Loop
     # Creating Minibatch
     idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
     Xb, Yb = Xtrain[idx], Ytrain[idx]
@@ -135,11 +130,11 @@ def mlp_manual_loss():
     d_h_pre_bn = BN_GAIN * bn_var_inv/N * (N * d_h_pre_act - d_h_pre_act.sum(0) - 
                                         N/(N-1)*bn_raw*(d_h_pre_act*bn_raw).sum(0))
     """
-    bn_mean_i = (1/N) * h_pre_bn.sum(0, keepdim=True)
+    bn_mean_i = (1 / N) * h_pre_bn.sum(0, keepdim=True)
     bn_diff = h_pre_bn - bn_mean_i
     bn_diff2 = bn_diff ** 2
-    bn_var = 1/(N-1) * bn_diff2.sum(0, keepdim=True)
-    bn_var_inv = (bn_var + 1e-5)**-0.5
+    bn_var = 1 / (N - 1) * bn_diff2.sum(0, keepdim=True)
+    bn_var_inv = (bn_var + 1e-5) ** -0.5
     bn_raw = bn_diff * bn_var_inv
 
     h_pre_act = BN_GAIN * bn_raw + BN_BIAS
@@ -204,10 +199,10 @@ def mlp_manual_loss():
     d_C is undoing the indexing used to create emb
     """
     d_log_probs = torch.zeros_like(log_probs)
-    d_log_probs[range(N), Yb] = -1.0/N
+    d_log_probs[range(N), Yb] = -1.0 / N
     cmp('log_probs', d_log_probs, log_probs)
 
-    d_probs = (1.0/probs) * d_log_probs
+    d_probs = (1.0 / probs) * d_log_probs
     cmp('probs', d_probs, probs)
 
     d_counts_sum_inv = (counts * d_probs).sum(1, keepdim=True)
@@ -241,7 +236,7 @@ def mlp_manual_loss():
     d_B2 = d_logits.sum(0)
     cmp('B2', d_B2, B2)
 
-    d_h_pre_act = (1 - h**2) * d_h
+    d_h_pre_act = (1 - h ** 2) * d_h
     cmp('h_pre_act', d_h_pre_act, h_pre_act)
 
     d_BN_GAIN = (bn_raw * d_h_pre_act).sum(0)
@@ -258,30 +253,30 @@ def mlp_manual_loss():
     d_bn_var_inv = (bn_diff * d_bn_raw).sum(0, keepdim=True)
     cmp('bn_var_inv', d_bn_var_inv, bn_var_inv)
 
-    d_bn_var = (-0.5 * (bn_var + 1e-5)**-1.5) * d_bn_var_inv
+    d_bn_var = (-0.5 * (bn_var + 1e-5) ** -1.5) * d_bn_var_inv
     cmp('bn_var', d_bn_var, bn_var)
 
-    d_bn_diff2 = (1.0/(N-1)) * torch.ones_like(bn_diff2) * d_bn_var
+    d_bn_diff2 = (1.0 / (N - 1)) * torch.ones_like(bn_diff2) * d_bn_var
     cmp('bn_diff2', d_bn_diff2, bn_diff2)
 
     d_bn_diff += 2 * bn_diff * d_bn_diff2
     cmp('bn_diff', d_bn_diff, bn_diff)
 
-    d_hp_pre_bn = d_bn_diff.clone()
+    d_h_pre_bn = d_bn_diff.clone()
 
     d_bn_mean_i = -d_bn_diff.sum(0)
     cmp('bn_mean_i', d_bn_mean_i, bn_mean_i)
 
-    d_hp_pre_bn += (1.0/N) * torch.ones_like(h_pre_bn) * d_bn_mean_i
-    cmp('hp_pre_bn', d_hp_pre_bn, h_pre_bn)
+    d_h_pre_bn += (1.0 / N) * torch.ones_like(h_pre_bn) * d_bn_mean_i
+    cmp('hp_pre_bn', d_h_pre_bn, h_pre_bn)
 
-    d_emb_cat = d_hp_pre_bn @ W1.T
+    d_emb_cat = d_h_pre_bn @ W1.T
     cmp('emb_cat', d_emb_cat, emb_cat)
 
-    d_W1 = emb_cat.T @ d_hp_pre_bn
+    d_W1 = emb_cat.T @ d_h_pre_bn
     cmp('W1', d_W1, W1)
 
-    d_B1 = d_hp_pre_bn.sum(0, keepdim=True)
+    d_B1 = d_h_pre_bn.sum(0, keepdim=True)
     cmp('B1', d_B1, B1)
 
     d_emb = d_emb_cat.view(emb.shape)
@@ -294,4 +289,134 @@ def mlp_manual_loss():
     cmp('C', d_C, C)
 
 
-mlp_manual_loss()
+# Improved MLP with manual loss and shorter backpropagation
+def best_mlp():
+    # Load the words and create a torch tensor
+    words = open("names.txt", "r").read().splitlines()
+
+    # Create string to integer and integer to string dictionaries, indexing the . element at position 0
+    chars = sorted(list(set(''.join(words))))
+    s_to_i = {s: i + 1 for i, s in enumerate(chars)}
+    s_to_i['.'] = 0
+    i_to_s = {i: s for s, i in s_to_i.items()}
+    vocab_size = len(i_to_s)
+
+    """
+        Creating the training dataset from the list of words. 80% of the data will be used for training, while 10%
+        will be used for validation and 10% will be used for testing
+    """
+    random.seed(42)
+    random.shuffle(words)
+    n1 = int(0.85 * len(words))
+    n2 = int(0.95 * len(words))
+
+    block_size = 3
+    Xtrain, Ytrain = create_data(words[:n1], s_to_i, block_size)
+    Xval, Yval = create_data(words[n1:n2], s_to_i, block_size)
+    Xtest, Ytest = create_data(words[n2:], s_to_i, block_size)
+
+    # Defining the embedding and hidden layers
+    n_embd = 10
+    n_hidden = 200
+
+    """
+       Defining the same parameters used in MLP like:
+       Generator = for reproducibility
+       C = Embeddings
+       W1, B1 = The Hidden Layer
+       W2, B2 = The Output Layer
+
+       The weights and biases have been initialized in a non-standard manner to note errors
+       during backpropagation
+       """
+    g = torch.Generator().manual_seed(532)
+    C = torch.randn((vocab_size, n_embd), generator=g)
+    W1 = torch.randn((n_embd * block_size, n_hidden), generator=g) * (5 / 3) / ((n_embd * block_size) ** 0.5)
+    B1 = torch.randn(n_hidden, generator=g) * 0.1
+    W2 = torch.randn((n_hidden, vocab_size), generator=g) * 0.01
+    B2 = torch.randn(vocab_size, generator=g) * 0.01
+
+    BN_GAIN = torch.ones((1, n_hidden)) * 0.1 + 1.0
+    BN_BIAS = torch.zeros((1, n_hidden)) * 0.1
+
+    parameters = [C, W1, B1, W2, B2, BN_GAIN, BN_BIAS]
+    print("Total number of parameters in this neural network is: ",
+          sum(p.nelement() for p in parameters))
+    for p in parameters:
+        p.requires_grad = True
+
+    # Training parameters
+    max_steps = 200000
+    batch_size = 32
+    N = batch_size
+    print_every = 10000
+    loss_i = []
+
+    with torch.no_grad():
+        for i in range(max_steps):
+            # Creating Minibatch
+            idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
+            Xb, Yb = Xtrain[idx], Ytrain[idx]
+
+            # Forward Pass
+            emb = C[Xb]
+            emb_cat = emb.view(emb.shape[0], -1)
+
+            # Linear Layer
+            h_pre_bn = emb_cat @ W1 + B1
+
+            # Batch Norm Layer
+            bn_mean = h_pre_bn.mean(0, keepdim=True)
+            bn_var = h_pre_bn.var(0, keepdim=True, unbiased=True)
+            bn_var_inv = (bn_var + 1e-5) ** -0.5
+            bn_raw = (h_pre_bn - bn_mean) * bn_var_inv
+            h_pre_act = BN_GAIN * bn_raw + BN_BIAS
+
+            # Non-Linearity
+            h = torch.tanh(h_pre_act)
+            logits = h @ W2 + B2
+            loss = F.cross_entropy(logits, Yb)
+
+            # Backward pass with manual loss
+            for p in parameters:
+                p.grad = None
+
+            d_logits = F.softmax(logits, 1)
+            d_logits[range(N), Yb] -= 1
+            d_logits /= N
+
+            d_h = d_logits @ W2.T
+            d_W2 = h.T @ d_logits
+            d_B2 = d_logits.sum(0)
+
+            d_h_pre_act = (1.0 - h**2) * d_h
+
+            d_BN_GAIN = (bn_raw * d_h_pre_act).sum(0, keepdim=True)
+            d_BN_BIAS = d_h_pre_act.sum(0, keepdim=True)
+            d_h_pre_bn = BN_GAIN * bn_var_inv/N * (N*d_h_pre_act - d_h_pre_act.sum(0) - N/(N - 1) * bn_raw *
+                                                   (d_h_pre_act * bn_raw).sum(0))
+
+            d_emb_cat = d_h_pre_bn @ W1.T
+            d_W1 = emb_cat.T @ d_h_pre_bn
+            d_B1 = d_h_pre_bn.sum(0)
+
+            d_emb = d_emb_cat.view(emb.shape)
+            d_C = torch.zeros_like(C)
+            for j in range(Xb.shape[0]):
+                for k in range(Xb.shape[1]):
+                    d_C[Xb[j, k]] += d_emb[j, k]
+
+            grads = [d_C, d_W1, d_B1, d_W2, d_B2, d_BN_GAIN, d_BN_BIAS]
+
+            # Update
+            LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
+            for p, grad in zip(parameters, grads):
+                p.data += -LEARNING_RATE * grad
+
+            if not i % print_every:
+                print(f'{i:7d}/{max_steps:7d}: {loss.item():.4f}')
+
+            loss_i.append(loss.log10().item())
+
+
+best_mlp()

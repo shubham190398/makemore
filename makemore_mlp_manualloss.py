@@ -107,111 +107,37 @@ def mlp_manual_loss():
         p.requires_grad = True
 
     # Training parameters
-    max_steps = 200000
+    N = 32
     batch_size = 32
     print_every = 10000
     loss_i = []
 
     # Training Loop
-    for i in range(max_steps):
 
-        # Constructing minibatch
-        idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
-        Xb, Yb = Xtrain[idx], Ytrain[idx]
+    # Creating Minibatch
+    idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
+    Xb, Yb = Xtrain[idx], Ytrain[idx]
 
-        # Forward Pass
-        """
-        We embed the characters into vectors and then concatenate the vectors.
-        The hidden layers are pre-activated, while the loss function is defined as a cross-entropy loss.
-        The hidden layers are batch normalized, but need to be multiplied by a batch normalization gain and
-        added to a batch normalization bias to ensure that there is some scope for the inputs to
-        move around
-        """
-        # Weight layer
-        emb = C[Xb]
-        emb_cat = emb.view(emb.shape[0], -1)
-        h_preact = emb_cat @ W1  # + B1
+    # Forward Pass
+    emb = C[Xb]
+    emb_cat = emb.view(emb.shape[0], -1)
 
-        # Batch normalization layer
-        bn_mean_i = h_preact.mean(0, keepdim=True)
-        bn_std_i = h_preact.std(0, keepdim=True)
-        h_preact = BN_GAIN * ((h_preact - bn_mean_i) / bn_std_i) + BN_BIAS
+    # Linear Layer
+    h_pre_bn = emb_cat @ W1 + B1
 
-        # Updating the Batch Normalization means and standard deviations
-        with torch.no_grad():
-            BN_MEAN = 0.999 * BN_MEAN + 0.001 * bn_mean_i
-            BN_STD = 0.999 * BN_STD + 0.001 * bn_std_i
+    # Batch Norm Layer
+    bn_mean_i = 1/N * h_pre_bn.sum(0, keepdim=True)
+    bn_diff = h_pre_bn - bn_mean_i
+    bn_diff2 = bn_diff ** 2
+    bn_var = 1/(N-1) * bn_diff2.sum(0, keepdim=True)
+    bn_var_inv = (bn_var + 1e-5)**-0.5
+    bn_raw = bn_diff + bn_var_inv
 
-        # Non-linearity
-        h = torch.tanh(h_preact)
-        logits = h @ W2 + B2
-        loss = F.cross_entropy(logits, Yb)
+    h_pre_act = BN_GAIN * bn_raw + BN_BIAS
 
-        # Backward Pass
-        for p in parameters:
-            p.grad = None
+    # Adding Non-Linearity
+    h = torch.tanh(h_pre_act)
 
-        loss.backward()
-
-        # Update
-        LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
-
-        for p in parameters:
-            p.data += -LEARNING_RATE * p.grad
-
-        # Track stats
-        if not i % print_every:
-            print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
-
-        loss_i.append(loss.log10().item())
-        """
-        Visualizing the working of tanh on the preactivated hidden layer
-        plt.hist(h.view(-1).tolist(), 60)
-        plt.show()
-        """
-        """
-        Visualizing when the tanh is very close to 1
-        plt.imshow(h.abs() > 0.99, cmap='gray', interpolation='nearest')
-        """
-
-    """
-    Calibrate batch normalization at the end of training
-    with torch.no_grad():
-        emb = C[Xtrain]
-        emb_cat = emb.view(emb.shape[0], -1)
-        h_preact = emb_cat @ W1 + B1
-        BN_MEAN = h_preact.mean(0, keepdim=True)
-        BN_STD = h_preact.std(0, keepdim=True)
-
-    """
-    # Printing split losses
-    print("Training loss")
-    split_loss(Xtrain, Ytrain, parameters, BN_MEAN, BN_STD)
-
-    print("Validation loss")
-    split_loss(Xval, Yval, parameters, BN_MEAN, BN_STD)
-
-    # Sampling from the model
-    g = torch.Generator().manual_seed(5813)
-
-    for _ in range(20):
-        context = [0] * block_size
-        output = []
-
-        while True:
-            emb = C[torch.tensor([context])]
-            h = torch.tanh(emb.view(1, -1) @ W1 + B1)
-            logits = h @ W2 + B2
-            probs = F.softmax(logits, dim=1)
-
-            idx = torch.multinomial(probs, num_samples=1, generator=g).item()
-            context = context[1:] + [idx]
-            output.append(idx)
-
-            if not idx:
-                break
-
-        print(''.join(i_to_s[i] for i in output[:len(output) - 1]))
 
 
 mlp_manual_loss()

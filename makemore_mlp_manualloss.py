@@ -165,6 +165,13 @@ def mlp_manual_loss():
     # Manual Backpropagation
     """
     d_log_probs/dx = -1/N for each element indexed by Yb and 0 for all other elements
+    d_probs/dx = 1/probs
+    d_counts_sum_inv requires broadcasting the sum
+    d_counts has 2 branches added together
+    d_count_sum/dx = -counts_sum ** -2
+    d_norm_logits/dx = counts
+    d_logits_maxes requires broadcasting
+    d_logits has 2 branches
     """
     d_log_probs = torch.zeros_like(log_probs)
     d_log_probs[range(N), Yb] = -1.0/N
@@ -194,5 +201,6 @@ def mlp_manual_loss():
 
     d_logits += F.one_hot(logits.max(1).indices, num_classes=logits.shape[1]) * d_logit_maxes
     cmp('logits', d_logits, logits)
+
 
 mlp_manual_loss()

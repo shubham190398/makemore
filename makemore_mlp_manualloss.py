@@ -170,5 +170,19 @@ def mlp_manual_loss():
     d_log_probs[range(N), Yb] = -1.0/N
     cmp('log_probs', d_log_probs, log_probs)
 
+    d_probs = (1.0/probs) * d_log_probs
+    cmp('probs', d_probs, probs)
+
+    d_counts_sum_inv = (counts * d_probs).sum(1, keepdim=True)
+    cmp('counts_sum_inv', d_counts_sum_inv, counts_sum_inv)
+
+    d_counts = counts_sum_inv * d_probs
+
+    d_counts_sum = (-counts_sum ** -2) * d_counts_sum_inv
+    cmp('counts_sum', d_counts_sum, counts_sum)
+
+    d_counts += torch.ones_like(counts) * d_counts_sum
+    cmp('counts', d_counts, counts)
+
 
 mlp_manual_loss()

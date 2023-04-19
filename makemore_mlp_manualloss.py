@@ -126,12 +126,12 @@ def mlp_manual_loss():
     h_pre_bn = emb_cat @ W1 + B1
 
     # Batch Norm Layer
-    bn_mean_i = 1/N * h_pre_bn.sum(0, keepdim=True)
+    bn_mean_i = (1/N) * h_pre_bn.sum(0, keepdim=True)
     bn_diff = h_pre_bn - bn_mean_i
     bn_diff2 = bn_diff ** 2
     bn_var = 1/(N-1) * bn_diff2.sum(0, keepdim=True)
     bn_var_inv = (bn_var + 1e-5)**-0.5
-    bn_raw = bn_diff + bn_var_inv
+    bn_raw = bn_diff * bn_var_inv
 
     h_pre_act = BN_GAIN * bn_raw + BN_BIAS
 
@@ -156,7 +156,7 @@ def mlp_manual_loss():
         p.grad = None
     for t in [log_probs, probs, counts, counts_sum,
               counts_sum_inv, norm_logits, logit_maxes, logits, h,
-              h_pre_act, bn_raw, bn_var_inv, bn_diff2, bn_diff, h_pre_bn,
+              h_pre_act, bn_raw, bn_var, bn_var_inv, bn_diff2, bn_diff, h_pre_bn,
               bn_mean_i, emb_cat, emb]:
         t.retain_grad()
     loss.backward()
@@ -175,6 +175,11 @@ def mlp_manual_loss():
     d_h, d_W2 and d_B2 are obtained via matrix multiplication with d_logits
     d_h_pre_act/dx = (1 - h**2)
     d_BN_GAIN, d_bn_raw and d_BN_BIAS are obtained from their elementwise multiplication
+    d_bn_var_inv/dx = bn_diff
+    d_bn_var/dx = -0.5*(bn_var + 1e-5)**-1.5
+    d_bn_diff has 2 branches
+    d_bn_diff2/dx = 2 * bn_diff along with broadcasting
+    d_bn_mean_i also has broadcasting
     """
     d_log_probs = torch.zeros_like(log_probs)
     d_log_probs[range(N), Yb] = -1.0/N
@@ -225,6 +230,25 @@ def mlp_manual_loss():
 
     d_BN_BIAS = d_h_pre_act.sum(0, keepdim=True)
     cmp('BN_BIAS', d_BN_BIAS, BN_BIAS)
+
+    d_bn_diff = bn_var_inv * d_bn_raw
+
+    d_bn_var_inv = (bn_diff * d_bn_raw).sum(0, keepdim=True)
+    cmp('bn_var_inv', d_bn_var_inv, bn_var_inv)
+
+    d_bn_var = (-0.5 * (bn_var + 1e-5)**-1.5) * d_bn_var_inv
+    cmp('bn_var', d_bn_var, bn_var)
+
+    d_bn_diff2 = (1.0/(N-1)) * torch.ones_like(bn_diff2) * d_bn_var
+    cmp('bn_diff2', d_bn_diff2, bn_diff2)
+
+    d_bn_diff += 2 * bn_diff * d_bn_diff2
+    cmp('bn_diff', d_bn_diff, bn_diff)
+
+    d_hp_pre_bn = d_bn_diff.clone()
+
+    d_bn_mean_i = -d_bn_diff.sum(0)
+    cmp('bn_mean_i', d_bn_mean_i, bn_mean_i)
 
 
 mlp_manual_loss()

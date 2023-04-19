@@ -138,6 +138,30 @@ def mlp_manual_loss():
     # Adding Non-Linearity
     h = torch.tanh(h_pre_act)
 
+    # Linear layer 2
+    logits = h @ W2 + B2
+
+    # Cross Entropy Loss
+    logit_maxes = logits.max(1, keepdim=True).values
+    norm_logits = logits - logit_maxes
+    counts = norm_logits.exp()
+    counts_sum = counts.sum(1, keepdim=True)
+    counts_sum_inv = counts_sum ** -1
+    probs = counts * counts_sum_inv
+    log_probs = probs.log()
+    loss = -log_probs[range(N), Yb].mean()
+
+    # Pytorch backward pass
+    for p in parameters:
+        p.grad = None
+    for t in [log_probs, probs, counts, counts_sum,
+              counts_sum_inv, norm_logits, logit_maxes, logits, h,
+              h_pre_act, bn_raw, bn_var_inv, bn_diff2, bn_diff, h_pre_bn,
+              bn_mean_i, emb_cat, emb]:
+        t.retain_grad()
+    loss.backward()
+    print(loss)
+
 
 
 mlp_manual_loss()

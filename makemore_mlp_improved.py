@@ -4,7 +4,6 @@ Using an RNN for predicting names
 
 # Importing Dependencies
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import random
 import matplotlib.pyplot as plt

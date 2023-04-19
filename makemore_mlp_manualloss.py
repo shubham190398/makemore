@@ -92,8 +92,8 @@ def mlp_manual_loss():
     C = torch.randn((vocab_size, n_embd), generator=g)
     W1 = torch.randn((n_embd * block_size, n_hidden), generator=g) * (5 / 3) / ((n_embd * block_size) ** 0.5)
     B1 = torch.randn(n_hidden, generator=g) * 0.1
-    W2 = torch.randn((n_hidden, vocab_size), generator=g) * 0.1
-    B2 = torch.randn(vocab_size, generator=g) * 0.1
+    W2 = torch.randn((n_hidden, vocab_size), generator=g) * 0.01
+    B2 = torch.randn(vocab_size, generator=g) * 0.01
 
     BN_GAIN = torch.ones((1, n_hidden)) * 0.1 + 1.0
     BN_BIAS = torch.zeros((1, n_hidden)) * 0.1
@@ -162,6 +162,13 @@ def mlp_manual_loss():
     loss.backward()
     print(loss)
 
+    # Manual Backpropagation
+    """
+    d_log_probs/dx = -1/N for each element indexed by Yb and 0 for all other elements
+    """
+    d_log_probs = torch.zeros_like(log_probs)
+    d_log_probs[range(N), Yb] = -1.0/N
+    cmp('log_probs', d_log_probs, log_probs)
 
 
 mlp_manual_loss()

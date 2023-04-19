@@ -66,8 +66,8 @@ def mlp_manual_loss():
     """
     random.seed(42)
     random.shuffle(words)
-    n1 = int(0.8 * len(words))
-    n2 = int(0.9 * len(words))
+    n1 = int(0.85 * len(words))
+    n2 = int(0.95 * len(words))
 
     block_size = 3
     Xtrain, Ytrain = create_data(words[:n1], s_to_i, block_size)
@@ -172,6 +172,9 @@ def mlp_manual_loss():
     d_norm_logits/dx = counts
     d_logits_maxes requires broadcasting
     d_logits has 2 branches
+    d_h, d_W2 and d_B2 are obtained via matrix multiplication with d_logits
+    d_h_pre_act/dx = (1 - h**2)
+    d_BN_GAIN, d_bn_raw and d_BN_BIAS are obtained from their elementwise multiplication
     """
     d_log_probs = torch.zeros_like(log_probs)
     d_log_probs[range(N), Yb] = -1.0/N
@@ -201,6 +204,27 @@ def mlp_manual_loss():
 
     d_logits += F.one_hot(logits.max(1).indices, num_classes=logits.shape[1]) * d_logit_maxes
     cmp('logits', d_logits, logits)
+
+    d_h = d_logits @ W2.T
+    cmp('h', d_h, h)
+
+    d_W2 = h.T @ d_logits
+    cmp('W2', d_W2, W2)
+
+    d_B2 = d_logits.sum(0)
+    cmp('B2', d_B2, B2)
+
+    d_h_pre_act = (1 - h**2) * d_h
+    cmp('h_pre_act', d_h_pre_act, h_pre_act)
+
+    d_BN_GAIN = (bn_raw * d_h_pre_act).sum(0)
+    cmp('BN_GAIN', d_BN_GAIN, BN_GAIN)
+
+    d_bn_raw = BN_GAIN * d_h_pre_act
+    cmp('bn_raw', d_bn_raw, bn_raw)
+
+    d_BN_BIAS = d_h_pre_act.sum(0, keepdim=True)
+    cmp('BN_BIAS', d_BN_BIAS, BN_BIAS)
 
 
 mlp_manual_loss()

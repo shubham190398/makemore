@@ -180,6 +180,9 @@ def mlp_manual_loss():
     d_bn_diff has 2 branches
     d_bn_diff2/dx = 2 * bn_diff along with broadcasting
     d_bn_mean_i also has broadcasting
+    d_h_pre_bn requires broadcasting
+    d_emb_cat, d_W1 and d_B1 are obtained via matrix multiplication with d_h_pre_bn
+    d_emb is just a representing the data of d_emb_cat in its original view
     """
     d_log_probs = torch.zeros_like(log_probs)
     d_log_probs[range(N), Yb] = -1.0/N
@@ -249,6 +252,21 @@ def mlp_manual_loss():
 
     d_bn_mean_i = -d_bn_diff.sum(0)
     cmp('bn_mean_i', d_bn_mean_i, bn_mean_i)
+
+    d_hp_pre_bn += (1.0/N) * torch.ones_like(h_pre_bn) * d_bn_mean_i
+    cmp('hp_pre_bn', d_hp_pre_bn, h_pre_bn)
+
+    d_emb_cat = d_hp_pre_bn @ W1.T
+    cmp('emb_cat', d_emb_cat, emb_cat)
+
+    d_W1 = emb_cat.T @ d_hp_pre_bn
+    cmp('W1', d_W1, W1)
+
+    d_B1 = d_hp_pre_bn.sum(0, keepdim=True)
+    cmp('B1', d_B1, B1)
+
+    d_emb = d_emb_cat.view(emb.shape)
+    cmp('emb', d_emb, emb)
 
 
 mlp_manual_loss()

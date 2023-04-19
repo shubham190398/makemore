@@ -183,6 +183,7 @@ def mlp_manual_loss():
     d_h_pre_bn requires broadcasting
     d_emb_cat, d_W1 and d_B1 are obtained via matrix multiplication with d_h_pre_bn
     d_emb is just a representing the data of d_emb_cat in its original view
+    d_C is undoing the indexing used to create emb
     """
     d_log_probs = torch.zeros_like(log_probs)
     d_log_probs[range(N), Yb] = -1.0/N
@@ -267,6 +268,12 @@ def mlp_manual_loss():
 
     d_emb = d_emb_cat.view(emb.shape)
     cmp('emb', d_emb, emb)
+
+    d_C = torch.zeros_like(C)
+    for j in range(Xb.shape[0]):
+        for k in range(Xb.shape[1]):
+            d_C[Xb[j, k]] += d_emb[j, k]
+    cmp('C', d_C, C)
 
 
 mlp_manual_loss()

@@ -161,7 +161,7 @@ def wavenet():
     for i in range(max_steps):
 
         # Constructing minibatch
-        idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
+        idx = torch.randint(0, Xtrain.shape[0], (batch_size,))
         Xb, Yb = Xtrain[idx], Ytrain[idx]
 
         # Forward Pass

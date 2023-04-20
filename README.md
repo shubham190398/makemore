@@ -9,18 +9,18 @@ Validation: 1.92
 
 Current best results from the model:
 
-Arrah
-Davy
-Ashayah
-Kaeleigh
-Steffon
-Dhyana
-Riley
-Vella
-Hadlie
-Atlee
-Maddelyn
-Hamdi
-Ziahna
-Kataleah
+Arrah\
+Davy\
+Ashayah\
+Kaeleigh\
+Steffon\
+Dhyana\
+Riley\
+Vella\
+Hadlie\
+Atlee\
+Maddelyn\
+Hamdi\
+Ziahna\
+Kataleah\
 Makenzie

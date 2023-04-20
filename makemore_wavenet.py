@@ -74,6 +74,30 @@ class Tanh:
         return []
 
 
+# Definition for embedding
+class Embedding:
+
+    def __init__(self, num_embeddings, embedding_dim):
+        self.weight = torch.randn((num_embeddings, embedding_dim))
+
+    def __call__(self, idx):
+        self.out = self.weight[idx]
+        return self.out
+
+    def parameters(self):
+        return [self.weight]
+
+
+# Definition for Flatten:
+class Flatten:
+    def __call__(self, x):
+        self.out = x.view(x.shape[0], -1)
+        return self.out
+
+    def parameters(self):
+        return []
+
+
 # Helper function to create data
 def create_data(words, s_to_i, block_size):
     X, Y = [], []
@@ -122,7 +146,7 @@ def wavenet():
         Creating the training dataset from the list of words. 80% of the data will be used for training, while 10%
         will be used for validation and 10% will be used for testing
     """
-    random.seed(42)
+    random.seed(32)
     random.shuffle(words)
     n1 = int(0.8 * len(words))
     n2 = int(0.9 * len(words))
@@ -133,7 +157,7 @@ def wavenet():
     Xtest, Ytest = create_data(words[n2:], s_to_i, block_size)
 
     # Setting torch seed
-    torch.manual_seed(1123)
+    torch.manual_seed(1223)
 
     # Defining the embedding and hidden layers
     n_embd = 10

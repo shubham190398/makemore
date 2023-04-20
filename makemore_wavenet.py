@@ -9,6 +9,67 @@ import random
 import matplotlib.pyplot as plt
 
 
+# Defining the linear layer
+class Linear:
+    def __init__(self, fan_in, fan_out, bias=True):
+        self.weight = torch.randn((fan_in, fan_out)) / fan_in**0.5
+        self.bias = torch.zeros(fan_out) if bias else None
+
+    def __call__(self, x):
+        self.out = x @ self.weight
+        if self.bias is not None:
+            self.out += self.bias
+        return self.out
+
+    def parameters(self):
+        return [self.weight] + ([] if self.bias is None else [self.bias])
+
+
+# Defining the batch normalization layer
+class BatchNorm1d:
+    def __init__(self, dim, eps=1e-5, momentum=0.1):
+        self.eps = eps
+        self.momentum = momentum
+        self.training = True
+
+        self.gamma = torch.ones(dim)
+        self.beta = torch.zeros(dim)
+
+        self.running_mean = torch.zeros(dim)
+        self.running_var = torch.ones(dim)
+
+    def __call__(self, x):
+        if self.training:
+            x_mean = x.mean(0, keepdim=True)
+            x_var = x.var(0, keepdim=True)
+        else:
+            x_mean = self.running_mean
+            x_var = self.running_var
+
+        x_hat = (x - x_mean)/torch.sqrt(x_var + self.eps)
+        self.out = self.gamma * x_hat + self.beta
+
+        if self.training:
+            with torch.no_grad():
+                self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * x_mean
+                self.running_var = (1 - self.momentum) * self.running_var + self.momentum * x_var
+
+        return self.out
+
+    def parameters(self):
+        return [self.gamma, self.beta]
+
+
+# Definition for non-linearity
+class Tanh:
+    def __call__(self, x):
+        self.out = torch.tanh(x)
+        return self.out
+
+    def parameters(self):
+        return []
+
+
 # Helper function to create data
 def create_data(words, s_to_i, block_size):
     X, Y = [], []
@@ -23,6 +84,21 @@ def create_data(words, s_to_i, block_size):
             context = context[1:] + [idx]
 
     return torch.tensor(X), torch.tensor(Y)
+
+
+# Helper function for calculating the loss in a split
+@torch.no_grad()
+def split_loss(X, Y, parameters, BN_MEAN, BN_STD):
+    C, W1, B1, W2, B2, BN_GAIN, BN_BIAS = parameters[0], parameters[1], parameters[2], parameters[3], parameters[4],\
+        parameters[5], parameters[6]
+    emb = C[X]
+    emb_cat = emb.view(emb.shape[0], -1)
+    h_preact = emb_cat @ W1 + B1
+    h_preact = BN_GAIN * ((h_preact - BN_MEAN) / BN_STD) + BN_BIAS
+    h = torch.tanh(h_preact)
+    logits = h @ W2 + B2
+    loss = F.cross_entropy(logits, Y)
+    print(loss.item())
 
 
 # Body of Wavenet
@@ -51,6 +127,64 @@ def wavenet():
     Xtrain, Ytrain = create_data(words[:n1], s_to_i, block_size)
     Xval, Yval = create_data(words[n1:n2], s_to_i, block_size)
     Xtest, Ytest = create_data(words[n2:], s_to_i, block_size)
+
+    # Setting torch seed
+    torch.manual_seed(1123)
+
+    # Defining the embedding and hidden layers
+    n_embd = 10
+    n_hidden = 200
+
+    C = torch.randn((vocab_size, n_embd))
+    layers = [
+        Linear(n_embd * block_size, n_hidden, bias=False), BatchNorm1d(n_hidden), Tanh(),
+        Linear(n_hidden, vocab_size),
+    ]
+
+    # Initializing the parameters
+    with torch.no_grad():
+        layers[-1].weight *= 0.1
+
+    parameters = [C] + [p for layer in layers for p in layer.parameters()]
+    print("Total parameters: ", sum(p.nelement() for p in parameters))
+
+    # Switch on gradient for the parameters
+    for p in parameters:
+        p.requires_grad = True
+
+    # Training
+    max_steps = 200000
+    batch_size = 32
+    loss_i = []
+    print_every = 10000
+
+    for i in range(max_steps):
+
+        # Constructing minibatch
+        idx = torch.randint(0, Xtrain.shape[0], (batch_size,), generator=g)
+        Xb, Yb = Xtrain[idx], Ytrain[idx]
+
+        # Forward Pass
+        emb = C[Xb]
+        x = emb.view(emb.shape[0], -1)
+        for layer in layers:
+            x = layer(x)
+        loss = F.cross_entropy(x, Yb)
+
+        # Backward pass
+        for p in parameters:
+            p.grad = None
+        loss.backward()
+
+        # Update
+        LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
+        for p in parameters:
+            p.data += -LEARNING_RATE * p.grad
+
+        # Tracking stats
+        if not i % print_every:
+            print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
+        loss_i.append(loss.log10().item())
 
 
 wavenet()

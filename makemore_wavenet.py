@@ -88,15 +88,15 @@ def create_data(words, s_to_i, block_size):
 
 # Helper function for calculating the loss in a split
 @torch.no_grad()
-def split_loss(X, Y, parameters):
-    C, layers = parameters[0], parameters[1:]
+def split_loss(X, Y, parameters, layers):
+    C = parameters[0]
     emb = C[X]
-    X = emb.view(emb.shape[0], -1)
+    x = emb.view(emb.shape[0], -1)
 
     for layer in layers:
-        X = layer(X)
+        x = layer(x)
 
-    loss = F.cross_entropy(X, Y)
+    loss = F.cross_entropy(x, Y)
 
     return loss.item()
 
@@ -153,7 +153,7 @@ def wavenet():
         p.requires_grad = True
 
     # Training
-    max_steps = 200000
+    max_steps = 30000
     batch_size = 32
     loss_i = []
     print_every = 10000
@@ -186,11 +186,16 @@ def wavenet():
             print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
         loss_i.append(loss.log10().item())
 
+    # Plotting losses
+    plt.plot(loss_i)
+    plt.show()
+
     # Evaluating the model
     for layer in layers:
         layer.training = False
 
-    print('Training loss: ', split_loss(Xtrain, Ytrain))
+    print('Training loss: ', split_loss(Xtrain, Ytrain, parameters, layers))
+    print('Validation loss: ', split_loss(Xval, Yval, parameters, layers))
 
 
 wavenet()

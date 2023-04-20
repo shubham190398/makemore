@@ -40,8 +40,12 @@ class BatchNorm1d:
 
     def __call__(self, x):
         if self.training:
-            x_mean = x.mean(0, keepdim=True)
-            x_var = x.var(0, keepdim=True)
+            if x.ndim == 2:
+                dim = 0
+            elif x.ndim == 3:
+                dim = (0, 1)
+            x_mean = x.mean(dim, keepdim=True)
+            x_var = x.var(dim, keepdim=True)
         else:
             x_mean = self.running_mean
             x_var = self.running_var
@@ -186,8 +190,11 @@ def wavenet():
             print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
         loss_i.append(loss.log10().item())
 
-    # Plotting losses
-    plt.plot(loss_i)
+    """
+    Plotting losses while taking an average of 1000 losses at a time. Achieved
+    by taking a view of the loss matrix
+    """
+    plt.plot(torch.tensor(loss_i).view(-1, 1000).mean(1))
     plt.show()
 
     # Evaluating the model

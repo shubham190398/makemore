@@ -176,7 +176,7 @@ def wavenet():
     torch.manual_seed(1223)
 
     # Defining the embedding and hidden layers
-    n_embd = 10
+    n_embd = 24
     n_hidden = 200
 
     model = Sequential([
@@ -203,7 +203,7 @@ def wavenet():
 
     # Training
     max_steps = 200000
-    batch_size = 32
+    batch_size = 48
     loss_i = []
     print_every = 10000
 
@@ -247,7 +247,7 @@ def wavenet():
     print('Validation loss: ', split_loss(Xval, Yval, model))
 
     # Sampling from the model
-    for _ in range(20):
+    for _ in range(30):
         context = [0]*block_size
         output = []
 

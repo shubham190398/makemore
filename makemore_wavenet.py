@@ -153,7 +153,7 @@ def wavenet():
         p.requires_grad = True
 
     # Training
-    max_steps = 30000
+    max_steps = 200000
     batch_size = 32
     loss_i = []
     print_every = 10000
@@ -196,6 +196,30 @@ def wavenet():
 
     print('Training loss: ', split_loss(Xtrain, Ytrain, parameters, layers))
     print('Validation loss: ', split_loss(Xval, Yval, parameters, layers))
+
+    # Sampling from the model
+    for _ in range(20):
+        context = [0]*block_size
+        output = []
+
+        while True:
+            emb = C[torch.tensor([context])]
+            x = emb.view(emb.shape[0], -1)
+
+            for layer in layers:
+                x = layer(x)
+
+            logits = x
+            probs = F.softmax(logits, dim=1)
+
+            idx = torch.multinomial(probs, num_samples=1).item()
+            context = context[1:] + [idx]
+            output.append(idx)
+
+            if not idx:
+                break
+
+        print(''.join(i_to_s[i] for i in output[:len(output)-1]))
 
 
 wavenet()

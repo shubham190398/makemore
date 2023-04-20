@@ -88,17 +88,17 @@ def create_data(words, s_to_i, block_size):
 
 # Helper function for calculating the loss in a split
 @torch.no_grad()
-def split_loss(X, Y, parameters, BN_MEAN, BN_STD):
-    C, W1, B1, W2, B2, BN_GAIN, BN_BIAS = parameters[0], parameters[1], parameters[2], parameters[3], parameters[4],\
-        parameters[5], parameters[6]
+def split_loss(X, Y, parameters):
+    C, layers = parameters[0], parameters[1:]
     emb = C[X]
-    emb_cat = emb.view(emb.shape[0], -1)
-    h_preact = emb_cat @ W1 + B1
-    h_preact = BN_GAIN * ((h_preact - BN_MEAN) / BN_STD) + BN_BIAS
-    h = torch.tanh(h_preact)
-    logits = h @ W2 + B2
-    loss = F.cross_entropy(logits, Y)
-    print(loss.item())
+    X = emb.view(emb.shape[0], -1)
+
+    for layer in layers:
+        X = layer(X)
+
+    loss = F.cross_entropy(X, Y)
+
+    return loss.item()
 
 
 # Body of Wavenet
@@ -177,7 +177,7 @@ def wavenet():
         loss.backward()
 
         # Update
-        LEARNING_RATE = 0.1 if i < (max_steps / 2) else 0.01
+        LEARNING_RATE = 0.1 if i < 150000 else 0.01
         for p in parameters:
             p.data += -LEARNING_RATE * p.grad
 
@@ -185,6 +185,12 @@ def wavenet():
         if not i % print_every:
             print(f"{i:7d}/{max_steps:7d}: {loss.item():.4f}")
         loss_i.append(loss.log10().item())
+
+    # Evaluating the model
+    for layer in layers:
+        layer.training = False
+
+    print('Training loss: ', split_loss(Xtrain, Ytrain))
 
 
 wavenet()

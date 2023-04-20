@@ -130,15 +130,9 @@ def create_data(words, s_to_i, block_size):
 
 # Helper function for calculating the loss in a split
 @torch.no_grad()
-def split_loss(X, Y, parameters, layers):
-    C = parameters[0]
-    emb = C[X]
-    x = emb.view(emb.shape[0], -1)
-
-    for layer in layers:
-        x = layer(x)
-
-    loss = F.cross_entropy(x, Y)
+def split_loss(X, Y, model):
+    logits = model(X)
+    loss = F.cross_entropy(logits, Y)
 
     return loss.item()
 
@@ -177,18 +171,18 @@ def wavenet():
     n_embd = 10
     n_hidden = 200
 
-    layers = [
+    model = Sequential([
         Embedding(vocab_size, n_embd),
         Flatten(),
         Linear(n_embd * block_size, n_hidden, bias=False), BatchNorm1d(n_hidden), Tanh(),
         Linear(n_hidden, vocab_size),
-    ]
+    ])
 
     # Initializing the parameters
     with torch.no_grad():
-        layers[-1].weight *= 0.1
+        model.layers[-1].weight *= 0.1
 
-    parameters = [p for layer in layers for p in layer.parameters()]
+    parameters = model.parameters()
     print("Total parameters: ", sum(p.nelement() for p in parameters))
 
     # Switch on gradient for the parameters
@@ -208,10 +202,8 @@ def wavenet():
         Xb, Yb = Xtrain[idx], Ytrain[idx]
 
         # Forward Pass
-        x = Xb
-        for layer in layers:
-            x = layer(x)
-        loss = F.cross_entropy(x, Yb)
+        logits = model(Xb)
+        loss = F.cross_entropy(logits, Yb)
 
         # Backward pass
         for p in parameters:
@@ -236,11 +228,11 @@ def wavenet():
     plt.show()
 
     # Evaluating the model
-    for layer in layers:
+    for layer in model.layers:
         layer.training = False
 
-    print('Training loss: ', split_loss(Xtrain, Ytrain, parameters, layers))
-    print('Validation loss: ', split_loss(Xval, Yval, parameters, layers))
+    print('Training loss: ', split_loss(Xtrain, Ytrain, model))
+    print('Validation loss: ', split_loss(Xval, Yval, model))
 
     # Sampling from the model
     for _ in range(20):
@@ -248,12 +240,7 @@ def wavenet():
         output = []
 
         while True:
-            x = torch.tensor([context])
-
-            for layer in layers:
-                x = layer(x)
-
-            logits = x
+            logits = model(torch.tensor([context]))
             probs = F.softmax(logits, dim=1)
 
             idx = torch.multinomial(probs, num_samples=1).item()

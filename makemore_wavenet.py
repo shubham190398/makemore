@@ -163,8 +163,9 @@ def wavenet():
     n_embd = 10
     n_hidden = 200
 
-    C = torch.randn((vocab_size, n_embd))
     layers = [
+        Embedding(vocab_size, n_embd),
+        Flatten(),
         Linear(n_embd * block_size, n_hidden, bias=False), BatchNorm1d(n_hidden), Tanh(),
         Linear(n_hidden, vocab_size),
     ]
@@ -173,7 +174,7 @@ def wavenet():
     with torch.no_grad():
         layers[-1].weight *= 0.1
 
-    parameters = [C] + [p for layer in layers for p in layer.parameters()]
+    parameters = [p for layer in layers for p in layer.parameters()]
     print("Total parameters: ", sum(p.nelement() for p in parameters))
 
     # Switch on gradient for the parameters
@@ -193,8 +194,7 @@ def wavenet():
         Xb, Yb = Xtrain[idx], Ytrain[idx]
 
         # Forward Pass
-        emb = C[Xb]
-        x = emb.view(emb.shape[0], -1)
+        x = Xb
         for layer in layers:
             x = layer(x)
         loss = F.cross_entropy(x, Yb)
@@ -234,8 +234,7 @@ def wavenet():
         output = []
 
         while True:
-            emb = C[torch.tensor([context])]
-            x = emb.view(emb.shape[0], -1)
+            x = torch.tensor([context])
 
             for layer in layers:
                 x = layer(x)

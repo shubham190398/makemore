@@ -89,9 +89,17 @@ class Embedding:
 
 # Definition for Flatten:
 class Flatten:
+    def __init__(self, n):
+        self.n = n
+
     def __call__(self, x):
-        self.out = x.view(x.shape[0], -1)
-        return self.out
+        B, T, C = x.shape
+        x = x.view(B, T//self.n, C*self.n)
+
+        if x.shape[1] == 1:
+            x = x.squeeze(1)
+
+        return x
 
     def parameters(self):
         return []
@@ -159,7 +167,7 @@ def wavenet():
     n1 = int(0.8 * len(words))
     n2 = int(0.9 * len(words))
 
-    block_size = 3
+    block_size = 8
     Xtrain, Ytrain = create_data(words[:n1], s_to_i, block_size)
     Xval, Yval = create_data(words[n1:n2], s_to_i, block_size)
     Xtest, Ytest = create_data(words[n2:], s_to_i, block_size)
